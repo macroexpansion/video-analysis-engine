@@ -1,0 +1,4 @@
+deepstream-test3-app
+*.o
+main
+*.engine
