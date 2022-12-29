@@ -1,5 +1,5 @@
-#ifndef _VA_ENGINE_VA_OBJECT_META_H_
-#define _VA_ENGINE_VA_OBJECT_META_H_
+#ifndef VA_ENGINE_OBJECT_META_H_
+#define VA_ENGINE_OBJECT_META_H_
 
 #include <string>
 #include <ostream>
@@ -8,10 +8,11 @@
 #include <glib.h>
 #include "gstnvdsmeta.h"
 
+namespace va {
 /**
- * Create bounding box from NvDs_RectParams
+ * Bounding box from NvDs_RectParams
  */
-struct VAObjectMetadata {
+struct ObjectMetadata {
 	std::string object_label;
 	int class_id;
 	double left;
@@ -20,20 +21,30 @@ struct VAObjectMetadata {
 	double height;
 	uint64_t timestamp;
 
-	VAObjectMetadata(NvDsObjectMeta* _metadata, std::string _object_label, guint64 _timestamp);
-	~VAObjectMetadata();
-	friend std::ostream& operator<<(std::ostream& os, const VAObjectMetadata& bbox);
+	ObjectMetadata();
+	ObjectMetadata(NvDsObjectMeta* _metadata, std::string _object_label, guint64 _timestamp);
+	ObjectMetadata(NvDsObjectMeta* _metadata, std::string _object_label);
+	~ObjectMetadata();
+	friend auto operator<<(std::ostream& os, const ObjectMetadata& bbox) -> std::ostream&;
 };
 
-struct VAFrameMetadata {
+/**
+ * Frame metadata which holds a list of ObjectMetadata from NvDs_RectParams
+ */
+struct FrameMetadata {
+	std::string video_file;
 	uint64_t timestamp;
-	std::vector<VAObjectMetadata> va_object_meta_list {};
+	std::vector<ObjectMetadata> va_object_meta_list {};
 
-	VAFrameMetadata(guint64 _timestamp);
-	~VAFrameMetadata();
-	friend std::ostream& operator<<(std::ostream& os, const VAFrameMetadata& va_frame_meta);
+	FrameMetadata();
+	FrameMetadata(guint64 _timestamp);
+	FrameMetadata(std::string _video_file, guint64 _timestamp);
+	~FrameMetadata();
+	friend auto operator<<(std::ostream& os, const FrameMetadata& va_frame_meta) -> std::ostream&;
 
-	void add_bbox(VAObjectMetadata* bbox);
+	auto add_bbox(ObjectMetadata* bbox) -> void;
 };
+
+} // namespace va
 
 #endif

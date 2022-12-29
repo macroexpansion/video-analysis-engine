@@ -1,28 +1,23 @@
 #include <iostream>
 #include <memory>
 
-#include "database.h"
-#include "engine.h"
+#include "va_database.h"
+#include "va_engine.h"
+#include "va_object_meta.h"
 
-int main(int argc, char** argv) {
+auto main(int argc, char** argv) -> int {
 	try {
 		std::string url { "tcp://127.0.0.1:3306" };
 		std::string username { "root" };
 		std::string password { "example" } ;
 		std::string database { "va" } ;
 
-		VADatabase db { url, username, password, database, false };
-		/* db.select();
-		db.insert(10, "test10");
-		db.select(); */
+		va::Database db { url, username, password, database, false };
+		// db.select(5);
 
-		/* VAEngine engine { argc, argv };
-		engine.set_database(&db);
-		engine.init(); */
-
-		std::unique_ptr<VAEngine> engine { std::make_unique<VAEngine>(argc, argv) };
+		std::unique_ptr<va::Engine> engine { std::make_unique<va::Engine>(argc, argv) };
 		engine->set_database(&db);
-		engine->init();
+		engine->run();
 	} catch (std::invalid_argument& e) {
 		g_printerr("%s", e.what());
 	} catch (std::exception& e) {

@@ -1,21 +1,23 @@
-#ifndef _VA_ENGINE_ENGINE_H_
-#define _VA_ENGINE_ENGINE_H_
+#ifndef VA_ENGINE_ENGINE_H_
+#define VA_ENGINE_ENGINE_H_
 
-#include <gst/gst.h>
-#include <glib.h>
-#include <stdio.h>
 #include <math.h>
 #include <string.h>
 #include <sys/time.h>
-#include <cuda_runtime_api.h>
+#include <stdio.h>
 
 #include <iostream>
 #include <stdexcept>
+
+#include <gst/gst.h>
+#include <glib.h>
+#include <cuda_runtime_api.h>
 #include "gstnvdsmeta.h"
 #include "nvds_yml_parser.h"
 #include "gst-nvmessage.h"
 
-#include "database.h"
+#include "va_database.h"
+#include "va_user_data.h"
 
 #define MAX_DISPLAY_LEN 64
 
@@ -48,12 +50,16 @@
  * pads having this capability will push GstBuffers containing cuda buffers. */
 #define GST_CAPS_FEATURES_NVMM "memory:NVMM"
 
-struct VAEngine {
+namespace va {
+/**
+ * Video analytic engine using GStreamer and TensorRT
+ */
+struct Engine {
 	GMainLoop* m_loop;
 	GstElement* m_pipeline;
 	GstElement* m_streammux;
 	GstElement* m_sink;
-	GstElement* m_pgie;
+	GstElement* m_nvinfer;
 	GstElement* m_queue1;
 	GstElement* m_queue2;
 	GstElement* m_queue3;
@@ -64,26 +70,39 @@ struct VAEngine {
 	GstElement* m_tiler;
 	GstElement* m_nvdslogger;
 	GstElement* m_transform;
-	GstBus* m_bus;
 	guint m_bus_watch_id;
-	GstPad* m_tiler_src_pad;
 	guint m_i = 0, m_num_sources = 0;
 	guint m_tiler_rows, m_tiler_columns;
-	guint m_pgie_batch_size;
+	guint m_nvinfer_batch_size;
 	struct cudaDeviceProp m_cuda_prop;
-	VADatabase* m_va_database;
+	va::Database* m_va_database;
 
 	int m_argc;
 	char** m_argv;
 
-	VAEngine(int argc, char** argv);
-	~VAEngine();
+	Engine(int argc, char** argv);
+	~Engine();
 
-	void init();
-	inline void m_calculate_num_sources(GList** src_list);
-	GstElement* m_create_source_bin(guint index, gchar* uri);
+	auto m_create_pipeline() -> GstElement*;
+	auto m_create_streamux() -> GstElement*;
+	auto m_create_source_bin(guint index, gchar* uri) -> GstElement*;
+	auto m_add_source_bin_to_pipeline() -> void;
+	auto m_create_nvinfer() -> GstElement*;
+	auto m_create_queue() -> std::tuple<GstElement*, GstElement*, GstElement*, GstElement*, GstElement*>;
+	auto m_create_nvdslogger() -> GstElement*;
+	auto m_create_tiler() -> GstElement*;
+	auto m_create_nvvidconv() -> GstElement*;
+	auto m_create_nvvidosd() -> GstElement*;
+	auto m_create_transform() -> GstElement*;
+	auto m_create_sink() -> GstElement*;
+	auto m_setup_element_config() -> void;
+	auto m_add_elements_to_pipeline() -> void;
+	auto m_create_message_handler() -> guint;
+	auto m_add_tiler_src_pad_buffer_probe(va::UserData* va_user_data) -> void;
 
-	void set_database(VADatabase* _va_database);
+	auto run() -> void;
+	auto set_database(va::Database* _va_database) -> void;
 };
+} // namespace va
 
 #endif

@@ -1,6 +1,8 @@
 #include "va_object_meta.h"
 
-VAObjectMetadata::VAObjectMetadata(NvDsObjectMeta* _metadata, std::string _object_label, guint64 _timestamp) :
+va::ObjectMetadata::ObjectMetadata() : object_label("a"), class_id(0), left(0.0), top(0.0), width(0.0), height(0.0), timestamp(0) {}
+
+va::ObjectMetadata::ObjectMetadata(NvDsObjectMeta* _metadata, std::string _object_label, guint64 _timestamp) :
 	object_label(_object_label),
 	timestamp(_timestamp)
 {
@@ -12,9 +14,18 @@ VAObjectMetadata::VAObjectMetadata(NvDsObjectMeta* _metadata, std::string _objec
 	height = rect.height;
 }
 
-VAObjectMetadata::~VAObjectMetadata() { }
+va::ObjectMetadata::ObjectMetadata(NvDsObjectMeta* _metadata, std::string _object_label) : object_label(_object_label) {
+	NvOSD_RectParams rect = _metadata->rect_params;
+	class_id = _metadata->class_id;
+	left = rect.left;
+	top = rect.top;
+	width = rect.width;
+	height = rect.height;
+}
 
-std::ostream& operator<<(std::ostream& os, const VAObjectMetadata& bbox) {
+va::ObjectMetadata::~ObjectMetadata() { }
+
+auto operator<<(std::ostream& os, const va::ObjectMetadata& bbox) -> std::ostream& {
 	os << "{ ";
 	os << "label: " << bbox.object_label << ", ";
 	os << "class id: " << bbox.class_id << ", ";
@@ -27,14 +38,12 @@ std::ostream& operator<<(std::ostream& os, const VAObjectMetadata& bbox) {
 	return os;
 }
 
-VAFrameMetadata::VAFrameMetadata(guint64 _timestamp) :
-	timestamp(_timestamp)
-{ }
+va::FrameMetadata::FrameMetadata(std::string _video_file, guint64 _timestamp) : video_file(_video_file), timestamp(_timestamp) { }
 
-VAFrameMetadata::~VAFrameMetadata() {
+va::FrameMetadata::FrameMetadata(guint64 _timestamp) : timestamp(_timestamp) { }
 
-}
+va::FrameMetadata::~FrameMetadata() { }
 
-void VAFrameMetadata::add_bbox(VAObjectMetadata* bbox) {
+auto va::FrameMetadata::add_bbox(va::ObjectMetadata* bbox) -> void {
 	va_object_meta_list.push_back(*bbox);
 }
