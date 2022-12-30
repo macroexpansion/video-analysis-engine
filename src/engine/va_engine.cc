@@ -31,13 +31,13 @@ static auto tiler_src_pad_buffer_probe(GstPad* pad, GstPadProbeInfo* info, void*
 	// NvDsDisplayMeta* display_meta = nullptr;
 	NvDsFrameMeta* frame_meta = nullptr;
 
-	va::UserData* va_user_data = (va::UserData*)user_data;
-	va::Database* va_database = (va::Database*)(va_user_data->va_database);
+	va::UserData* va_user_data = static_cast<va::UserData*>(user_data);
+	va::Database* va_database = static_cast<va::Database*>(va_user_data->va_database);
 
-	GstBuffer* buf = (GstBuffer*)(info->data);
+	GstBuffer* buf = static_cast<GstBuffer*>(info->data);
 	NvDsBatchMeta* batch_meta = gst_buffer_get_nvds_batch_meta(buf);
 	for (l_frame = batch_meta->frame_meta_list; l_frame != nullptr; l_frame = l_frame->next) {
-		frame_meta = (NvDsFrameMeta*)(l_frame->data);
+		frame_meta = static_cast<NvDsFrameMeta*>(l_frame->data);
 		
 		std::string video_file = { "test" };
 		va::FrameMetadata va_frame_meta {
@@ -45,29 +45,35 @@ static auto tiler_src_pad_buffer_probe(GstPad* pad, GstPadProbeInfo* info, void*
 			frame_meta->ntp_timestamp // frame timestamp
 		};
 		for (l_obj = frame_meta->obj_meta_list; l_obj != nullptr; l_obj = l_obj->next) {
-			object_meta = (NvDsObjectMeta*)(l_obj->data);
+			object_meta = static_cast<NvDsObjectMeta*>(l_obj->data);
 
 			if (va_database) {
-				va::ObjectMetadata bbox {
-					object_meta, // metadata
-					pgie_classes[object_meta->class_id], // label
-					frame_meta->ntp_timestamp // frame timestamp
-				};
-				va_frame_meta.add_bbox(&bbox);
+				va_frame_meta.va_object_meta_list.emplace_back(
+					object_meta, 
+					pgie_classes[object_meta->class_id], 
+					frame_meta->ntp_timestamp
+				);
+				// std::cout << va_frame_meta.va_object_meta_list.size() << std::endl;
 			}
 
 			if (object_meta->class_id == PGIE_CLASS_ID_VEHICLE) {
-				vehicle_count++;
-				num_rects++;
+				++vehicle_count;
+				++num_rects;
 			}
 			if (object_meta->class_id == PGIE_CLASS_ID_PERSON) {
-				person_count++;
-				num_rects++;
+				++vehicle_count;
+				++num_rects;
 			}
 		}
 
-		if (va_database) {
-			va_database->insert(&va_frame_meta);
+		/* count the frame and reset the count to 0 if it reachs save_interval */
+		++va_user_data->frame_count;
+		if (va_user_data->frame_count == va_user_data->save_interval) {
+			if (va_database) {
+				va_database->insert(&va_frame_meta);
+			}
+			// std::cout << "save at: " << va_user_data->frame_count << std::endl;
+			va_user_data->frame_count = 0;
 		}
 
 		/* g_print(
@@ -83,7 +89,7 @@ static auto tiler_src_pad_buffer_probe(GstPad* pad, GstPadProbeInfo* info, void*
 		display_meta = nvds_acquire_display_meta_from_pool(batch_meta);
 
 		NvOSD_TextParams* txt_params = &display_meta->text_params[0];
-		txt_params->display_text = (char*)g_malloc0(MAX_DISPLAY_LEN); // g_malloc0 return void*, cast from void* to char*
+		txt_params->display_text = static_cast<char*>(g_malloc0(MAX_DISPLAY_LEN)); // g_malloc0 return void*, cast from void* to char*
 		offset = snprintf(txt_params->display_text, MAX_DISPLAY_LEN, "Person = %d ", person_count);
 		offset = snprintf(txt_params->display_text + offset , MAX_DISPLAY_LEN, "Vehicle = %d ", vehicle_count);
 		
@@ -269,7 +275,7 @@ inline auto va::Engine::m_add_source_bin_to_pipeline() -> void {
 		nvds_parse_source_list(&src_list, m_argv[1], "source-list");
 		GList* temp_src_list = src_list;
 		while (temp_src_list) {
-			m_num_sources++;
+			++m_num_sources;
 			temp_src_list = temp_src_list->next;
 		}
 		g_list_free(temp_src_list);
@@ -277,7 +283,7 @@ inline auto va::Engine::m_add_source_bin_to_pipeline() -> void {
 		m_num_sources = m_argc - 1;
 	}
 
-	for (guint i = 0; i < m_num_sources; i++) {
+	for (guint i = 0; i < m_num_sources; ++i) {
 		GstPad *sinkpad, *srcpad;
 		gchar pad_name[16] = { };
 
@@ -512,7 +518,8 @@ inline auto va::Engine::m_add_tiler_src_pad_buffer_probe(va::UserData* va_user_d
 }
 
 auto va::Engine::run() -> void {
-	va::UserData va_user_data { m_va_database };
+	int save_interval = 60;
+	va::UserData va_user_data { m_va_database, save_interval };
 
 	/* Standard GStreamer initialization */
 	gst_init(&m_argc, &m_argv);
@@ -560,7 +567,7 @@ auto va::Engine::run() -> void {
 		g_print("Using file: %s\n", m_argv[1]);
 	} else {
 		g_print("Now playing:");
-		for (guint i = 0; i < m_num_sources; i++) {
+		for (guint i = 0; i < m_num_sources; ++i) {
 			g_print(" %s,", m_argv[i + 1]);
 		}
 		g_print("\n");

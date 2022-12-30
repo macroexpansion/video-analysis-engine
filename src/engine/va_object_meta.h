@@ -21,6 +21,14 @@ struct ObjectMetadata {
 	double height;
 	uint64_t timestamp;
 
+	// copy constructor and assignment
+	ObjectMetadata(const ObjectMetadata& other) = default;
+	ObjectMetadata& operator=(const ObjectMetadata& other) = default;
+
+	// move constructor and assignment
+	ObjectMetadata(ObjectMetadata&& other) = default;
+	ObjectMetadata& operator=(ObjectMetadata&& other) = default;
+
 	ObjectMetadata();
 	ObjectMetadata(NvDsObjectMeta* _metadata, std::string _object_label, guint64 _timestamp);
 	ObjectMetadata(NvDsObjectMeta* _metadata, std::string _object_label);
@@ -36,13 +44,19 @@ struct FrameMetadata {
 	uint64_t timestamp;
 	std::vector<ObjectMetadata> va_object_meta_list {};
 
+	// copy constructor and assignment
+	FrameMetadata(const FrameMetadata& other) = default;
+	FrameMetadata& operator=(const FrameMetadata& other) = default;
+
+	// move constructor and assignment
+	FrameMetadata(FrameMetadata&& other) = default;
+	FrameMetadata& operator=(FrameMetadata&& other) = default;
+
 	FrameMetadata();
 	FrameMetadata(guint64 _timestamp);
 	FrameMetadata(std::string _video_file, guint64 _timestamp);
 	~FrameMetadata();
 	friend auto operator<<(std::ostream& os, const FrameMetadata& va_frame_meta) -> std::ostream&;
-
-	auto add_bbox(ObjectMetadata* bbox) -> void;
 };
 
 } // namespace va
